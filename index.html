@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Valentine</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --card-max:520px;
+    --pink:#e8396e;
+    --pink-light:#f9a8c9;
+    --pink-bg:#fde2ec;
+    --white:#fff;
+    --shadow:0 12px 44px rgba(180,60,100,.18);
+    --radius:28px;
+    --btn-radius:16px;
+    --transition-step:260ms;
+  }
+
+  html,body{
+    height:100%;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:linear-gradient(145deg,#fce4ec 0%,#f8bbd0 40%,#f48fb1 100%);
+    overflow:hidden;
+  }
+
+  .app{
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 16px;
+  }
+
+  .card{
+    width:100%;
+    max-width:var(--card-max);
+    background:var(--white);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:40px 32px 34px;
+    text-align:center;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* steps */
+  .step{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    opacity:0;
+    transform:translateY(12px);
+    transition:opacity var(--transition-step) ease, transform var(--transition-step) ease;
+  }
+  .step.active{
+    display:flex;
+    opacity:1;
+    transform:translateY(0);
+  }
+
+  /* photo */
+  .photo-frame{
+    width:160px;height:160px;border-radius:50%;
+    overflow:hidden;border:4px solid var(--pink-light);
+    margin-bottom:22px;background:var(--pink-bg);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .photo-frame img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo-frame .fallback{
+    font-size:13px;color:#c06;padding:12px;line-height:1.3;display:none;
+  }
+
+  .title{
+    font-size:clamp(22px,5vw,28px);
+    font-weight:800;
+    color:#3a1a2e;
+    line-height:1.2;
+    margin-bottom:6px;
+  }
+  .signature{
+    font-size:15px;color:#b05080;font-style:italic;margin-bottom:22px;
+  }
+
+  /* STAGE: invisible movement area (large) */
+  .stage{
+    width:100%;
+    position:relative;
+    height:170px; /* LARGE so it doesn’t feel cramped */
+  }
+
+  /* row showing a REAL choice */
+  .btn-row{
+    position:absolute;
+    left:50%;
+    top:72px;                /* buttons line position */
+    transform:translateX(-50%);
+    display:flex;
+    gap:16px;
+    align-items:center;
+    justify-content:center;
+    z-index:1;
+    width:max-content;
+  }
+
+  /* slots reserve layout width so row is stable */
+  .btn-slot{
+    width:150px;height:54px;flex-shrink:0;
+  }
+
+  .btn{
+    width:150px;height:54px;
+    border:none;border-radius:var(--btn-radius);
+    font-size:17px;font-weight:800;
+    cursor:pointer;
+    letter-spacing:.2px;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+  }
+
+  .btn-yes{
+    background:var(--pink);
+    color:var(--white);
+    box-shadow:0 10px 24px rgba(232,57,110,.30);
+  }
+  .btn-yes:active{background:#d1305f}
+
+  .btn-no{
+    background:#f3e0e8;
+    color:#a04068;
+    box-shadow:0 10px 24px rgba(160,64,104,.14);
+  }
+  .btn-no:active{background:#e8c8d8}
+
+  /* evasive button MUST be a direct child of stage */
+  .btn.evasive{
+    position:absolute;
+    left:0;top:0;
+    z-index:10;
+    will-change:transform;
+    transition:transform 200ms cubic-bezier(.2,.9,.2,1);
+    touch-action:none;
+  }
+
+  .hint{
+    margin-top:16px;
+    font-size:15px;
+    color:#7a3a5a;
+    font-weight:600;
+  }
+
+  .final-title{
+    font-size:clamp(38px,8vw,56px);
+    font-weight:900;
+    color:var(--pink);
+    margin-top:10px;
+    margin-bottom:12px;
+  }
+  .final-sub{
+    font-size:clamp(16px,3.6vw,20px);
+    color:#7a3a5a;
+    font-weight:600;
+  }
+
+  /* confetti */
+  .confetti-piece{
+    position:fixed;
+    width:10px;height:10px;border-radius:2px;
+    top:-20px;opacity:1;z-index:999;
+    animation:confetti-fall linear forwards;
+  }
+  @keyframes confetti-fall{
+    0%{transform:translateY(0) rotate(0deg);opacity:1}
+    85%{opacity:1}
+    100%{transform:translateY(calc(100vh + 40px)) rotate(var(--rot));opacity:0}
+  }
+
+  @media(max-width:480px){
+    .card{padding:28px 18px 28px}
+    .photo-frame{width:130px;height:130px}
+    .btn,.btn-slot{width:130px;height:50px}
+    .btn{font-size:15px}
+    .stage{height:190px}
+    .btn-row{top:78px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="card">
+
+    <!-- STEP 1 -->
+    <div class="step active" id="step1">
+      <div class="photo-frame">
+        <img src="harry.jpeg" alt="Harry Styles"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        <span class="fallback">Add<br>harry.jpg</span>
+      </div>
+      <div class="title">Do you want to be my Valentine?</div>
+      <div class="signature">— Harry Styles</div>
+
+      <div class="stage" id="stage1">
+        <div class="btn-row">
+          <div class="btn-slot" id="slot-yes1"></div>
+          <button class="btn btn-no" id="btn-no1" type="button">No</button>
+        </div>
+        <button class="btn btn-yes evasive" id="btn-yes1" type="button">Yes</button>
+      </div>
+
+      <div class="hint">Je suis le vrai Harry Styles promis stp clique sur Oui je t'aimeeeeee</div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step" id="step2">
+      <div class="photo-frame">
+        <img src="brahim.jpg" alt="Brahim"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        <span class="fallback">Add<br>brahim.jpg</span>
+      </div>
+      <div class="title">Tu veux bien être ma Valentine ?</div>
+      <div class="signature">— Brahim</div>
+
+      <div class="stage" id="stage2">
+        <div class="btn-row">
+          <button class="btn btn-yes" id="btn-yes2" type="button">Oui</button>
+          <div class="btn-slot" id="slot-no2"></div>
+        </div>
+        <button class="btn btn-no evasive" id="btn-no2" type="button">Non</button>
+      </div>
+
+      <div class="hint">Alors Mimi tu t'attendais a ça ?</div>
+    </div>
+
+    <!-- FINAL -->
+    <div class="step" id="step3">
+      <div class="final-title">Ouaissssss !</div>
+      <div class="final-sub">J'imagine que t'as pas essayé de cliquer sur Oui pour Harry hein mimi ?</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const CONFIG = {
+    proximityThreshold: 95,   // how close before dodging (mouse)
+    minDodgeDistance: 130,    // avoid tiny moves
+    cooldownMs: 100,          // anti jitter
+    reactionDelayMs: 45,      // makes it feel intentional
+    stageMargin: 10,          // keep inside stage
+    maxAttempts: 26,
+    mobileExtraPx: 40
+  };
+
+  let currentStep = 1;
+  const instances = [];
+
+  function setStep(n){
+    const prev = document.getElementById('step' + currentStep);
+    const next = document.getElementById('step' + n);
+    if(!prev || !next) return;
+
+    prev.classList.remove('active');
+    next.classList.add('active');
+    currentStep = n;
+
+    // after DOM is visible, re-anchor evasive buttons
+    requestAnimationFrame(() => {
+      instances.forEach(inst => {
+        if (next.contains(inst.stage)) resetToSlot(inst);
+      });
+      if(n === 3) spawnConfetti();
+    });
+  }
+
+  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+  function resetToSlot(inst){
+    const stageRect = inst.stage.getBoundingClientRect();
+    const slotRect  = inst.slot.getBoundingClientRect();
+    const x = slotRect.left - stageRect.left;
+    const y = slotRect.top  - stageRect.top;
+    inst.x = x;
+    inst.y = y;
+    inst.button.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  }
+
+  function computeNextPosition(pointerX, pointerY, curX, curY, stageW, stageH, btnW, btnH){
+    const m = CONFIG.stageMargin;
+    const minX = m;
+    const maxX = Math.max(m, stageW - btnW - m);
+    const minY = m;
+    const maxY = Math.max(m, stageH - btnH - m);
+
+    let best = { x: curX, y: curY, score: -Infinity };
+
+    for(let i=0;i<CONFIG.maxAttempts;i++){
+      const nx = minX + Math.random() * (maxX - minX);
+      const ny = minY + Math.random() * (maxY - minY);
+
+      const distCur = Math.hypot(nx - curX, ny - curY);
+      const distPtr = Math.hypot((nx + btnW/2) - pointerX, (ny + btnH/2) - pointerY);
+
+      const score = distPtr + (distCur >= CONFIG.minDodgeDistance ? 220 : distCur * 0.6);
+      if(score > best.score) best = { x: nx, y: ny, score };
+    }
+
+    return { x: clamp(best.x, minX, maxX), y: clamp(best.y, minY, maxY) };
+  }
+
+  function makeEvasive({button, stage, slot}){
+    const inst = { button, stage, slot, x:0, y:0, cooldown:false };
+    instances.push(inst);
+
+    // anchor to slot once visible
+    requestAnimationFrame(() => resetToSlot(inst));
+
+    function dodge(px, py){
+      if(inst.cooldown) return;
+      inst.cooldown = true;
+
+      setTimeout(() => {
+        const stageRect = stage.getBoundingClientRect();
+        const btnRect   = button.getBoundingClientRect();
+        const btnW = btnRect.width || button.offsetWidth;
+        const btnH = btnRect.height || button.offsetHeight;
+
+        const pos = computeNextPosition(
+          px, py,
+          inst.x, inst.y,
+          stageRect.width, stageRect.height,
+          btnW, btnH
+        );
+
+        inst.x = pos.x;
+        inst.y = pos.y;
+        button.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+
+        setTimeout(() => inst.cooldown = false, CONFIG.cooldownMs);
+      }, CONFIG.reactionDelayMs);
+    }
+
+    stage.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const stageRect = stage.getBoundingClientRect();
+      const px = e.clientX - stageRect.left;
+      const py = e.clientY - stageRect.top;
+
+      // distance to button center (in stage coords)
+      const btnRect = button.getBoundingClientRect();
+      const cx = (btnRect.left - stageRect.left) + btnRect.width / 2;
+      const cy = (btnRect.top  - stageRect.top)  + btnRect.height / 2;
+      const dist = Math.hypot(px - cx, py - cy);
+
+      if(dist < CONFIG.proximityThreshold) dodge(px, py);
+    });
+
+    // mobile: prevent tap
+    function onTouch(e){
+      const t = e.touches ? e.touches[0] : e;
+      const stageRect = stage.getBoundingClientRect();
+      const px = t.clientX - stageRect.left;
+      const py = t.clientY - stageRect.top;
+
+      const btnRect = button.getBoundingClientRect();
+      const cx = (btnRect.left - stageRect.left) + btnRect.width / 2;
+      const cy = (btnRect.top  - stageRect.top)  + btnRect.height / 2;
+      const dist = Math.hypot(px - cx, py - cy);
+
+      if(dist < CONFIG.proximityThreshold + CONFIG.mobileExtraPx){
+        e.preventDefault();
+        dodge(px, py);
+      }
+    }
+    button.addEventListener('touchstart', onTouch, { passive:false });
+    button.addEventListener('pointerdown', (e) => {
+      if(e.pointerType === 'touch') onTouch(e);
+    });
+  }
+
+  function spawnConfetti(){
+    const colors = ['#e8396e','#f48fb1','#ff80ab','#f9a8c9','#ce93d8','#fff176','#ef5350','#ab47bc'];
+    const count = 60;
+    for(let i=0;i<count;i++){
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = (Math.random()*100) + 'vw';
+      el.style.background = colors[(Math.random()*colors.length)|0];
+      el.style.width  = (6 + Math.random()*8) + 'px';
+      el.style.height = (6 + Math.random()*8) + 'px';
+      el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      el.style.setProperty('--rot', (300 + Math.random()*400) + 'deg');
+      el.style.animationDuration = (1.8 + Math.random()*2.0) + 's';
+      el.style.animationDelay = (Math.random()*0.9) + 's';
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  // init wiring
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-no1').addEventListener('click', () => setStep(2));
+    document.getElementById('btn-yes2').addEventListener('click', () => setStep(3));
+
+    makeEvasive({
+      button: document.getElementById('btn-yes1'),
+      stage:  document.getElementById('stage1'),
+      slot:   document.getElementById('slot-yes1'),
+    });
+
+    makeEvasive({
+      button: document.getElementById('btn-no2'),
+      stage:  document.getElementById('stage2'),
+      slot:   document.getElementById('slot-no2'),
+    });
+  });
+
+  window.addEventListener('resize', () => {
+    // only reset for visible step to avoid 0-size rects from hidden steps
+    const visible = document.getElementById('step' + currentStep);
+    instances.forEach(inst => {
+      if (visible.contains(inst.stage)) resetToSlot(inst);
+    });
+  });
+</script>
+</body>
+</html>
